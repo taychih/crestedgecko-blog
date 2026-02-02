@@ -12,12 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RssDotxmlRouteImport } from './routes/rss[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as MorphsRouteImport } from './routes/Morphs'
+import { Route as LogbookRouteImport } from './routes/Logbook'
+import { Route as HomeRouteImport } from './routes/Home'
+import { Route as CareGuideRouteImport } from './routes/Care-guide'
+import { Route as BreedingRouteImport } from './routes/Breeding'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as UserRouteRouteImport } from './routes/_user/route'
 import { Route as PublicRouteRouteImport } from './routes/_public/route'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as PublicIndexRouteImport } from './routes/_public/index'
 import { Route as UserProfileRouteImport } from './routes/_user/profile'
 import { Route as PublicUnsubscribeRouteImport } from './routes/_public/unsubscribe'
 import { Route as PublicSearchRouteImport } from './routes/_public/search'
@@ -51,6 +56,31 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MorphsRoute = MorphsRouteImport.update({
+  id: '/Morphs',
+  path: '/Morphs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogbookRoute = LogbookRouteImport.update({
+  id: '/Logbook',
+  path: '/Logbook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/Home',
+  path: '/Home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CareGuideRoute = CareGuideRouteImport.update({
+  id: '/Care-guide',
+  path: '/Care-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BreedingRoute = BreedingRouteImport.update({
+  id: '/Breeding',
+  path: '/Breeding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -68,15 +98,15 @@ const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRouteRoute,
-} as any)
-const PublicIndexRoute = PublicIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PublicRouteRoute,
 } as any)
 const UserProfileRoute = UserProfileRouteImport.update({
   id: '/profile',
@@ -165,7 +195,13 @@ const AdminPostsEditIdRoute = AdminPostsEditIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/Breeding': typeof BreedingRoute
+  '/Care-guide': typeof CareGuideRoute
+  '/Home': typeof HomeRoute
+  '/Logbook': typeof LogbookRoute
+  '/Morphs': typeof MorphsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -179,17 +215,22 @@ export interface FileRoutesByFullPath {
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
   '/profile': typeof UserProfileRoute
-  '/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/post/$slug': typeof PublicPostSlugRoute
-  '/admin/comments': typeof AdminCommentsIndexRoute
-  '/admin/media': typeof AdminMediaIndexRoute
+  '/admin/comments/': typeof AdminCommentsIndexRoute
+  '/admin/media/': typeof AdminMediaIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
-  '/admin/settings': typeof AdminSettingsIndexRoute
-  '/admin/tags': typeof AdminTagsIndexRoute
+  '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/tags/': typeof AdminTagsIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/Breeding': typeof BreedingRoute
+  '/Care-guide': typeof CareGuideRoute
+  '/Home': typeof HomeRoute
+  '/Logbook': typeof LogbookRoute
+  '/Morphs': typeof MorphsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -202,7 +243,6 @@ export interface FileRoutesByTo {
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
   '/profile': typeof UserProfileRoute
-  '/': typeof PublicIndexRoute
   '/admin': typeof AdminIndexRoute
   '/post/$slug': typeof PublicPostSlugRoute
   '/admin/comments': typeof AdminCommentsIndexRoute
@@ -214,10 +254,16 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_public': typeof PublicRouteRouteWithChildren
   '/_user': typeof UserRouteRouteWithChildren
   '/admin': typeof AdminRouteRouteWithChildren
+  '/Breeding': typeof BreedingRoute
+  '/Care-guide': typeof CareGuideRoute
+  '/Home': typeof HomeRoute
+  '/Logbook': typeof LogbookRoute
+  '/Morphs': typeof MorphsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/rss.xml': typeof RssDotxmlRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -231,7 +277,6 @@ export interface FileRoutesById {
   '/_public/search': typeof PublicSearchRoute
   '/_public/unsubscribe': typeof PublicUnsubscribeRoute
   '/_user/profile': typeof UserProfileRoute
-  '/_public/': typeof PublicIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/_public/post/$slug': typeof PublicPostSlugRoute
   '/admin/comments/': typeof AdminCommentsIndexRoute
@@ -244,7 +289,13 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/admin'
+    | '/Breeding'
+    | '/Care-guide'
+    | '/Home'
+    | '/Logbook'
+    | '/Morphs'
     | '/robots.txt'
     | '/rss.xml'
     | '/sitemap.xml'
@@ -258,17 +309,22 @@ export interface FileRouteTypes {
     | '/search'
     | '/unsubscribe'
     | '/profile'
-    | '/'
     | '/admin/'
     | '/post/$slug'
-    | '/admin/comments'
-    | '/admin/media'
+    | '/admin/comments/'
+    | '/admin/media/'
     | '/admin/posts/'
-    | '/admin/settings'
-    | '/admin/tags'
+    | '/admin/settings/'
+    | '/admin/tags/'
     | '/admin/posts/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/Breeding'
+    | '/Care-guide'
+    | '/Home'
+    | '/Logbook'
+    | '/Morphs'
     | '/robots.txt'
     | '/rss.xml'
     | '/sitemap.xml'
@@ -281,7 +337,6 @@ export interface FileRouteTypes {
     | '/search'
     | '/unsubscribe'
     | '/profile'
-    | '/'
     | '/admin'
     | '/post/$slug'
     | '/admin/comments'
@@ -292,10 +347,16 @@ export interface FileRouteTypes {
     | '/admin/posts/edit/$id'
   id:
     | '__root__'
+    | '/'
     | '/_auth'
     | '/_public'
     | '/_user'
     | '/admin'
+    | '/Breeding'
+    | '/Care-guide'
+    | '/Home'
+    | '/Logbook'
+    | '/Morphs'
     | '/robots.txt'
     | '/rss.xml'
     | '/sitemap.xml'
@@ -309,7 +370,6 @@ export interface FileRouteTypes {
     | '/_public/search'
     | '/_public/unsubscribe'
     | '/_user/profile'
-    | '/_public/'
     | '/admin/'
     | '/_public/post/$slug'
     | '/admin/comments/'
@@ -321,10 +381,16 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   PublicRouteRoute: typeof PublicRouteRouteWithChildren
   UserRouteRoute: typeof UserRouteRouteWithChildren
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  BreedingRoute: typeof BreedingRoute
+  CareGuideRoute: typeof CareGuideRoute
+  HomeRoute: typeof HomeRoute
+  LogbookRoute: typeof LogbookRoute
+  MorphsRoute: typeof MorphsRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   RssDotxmlRoute: typeof RssDotxmlRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -353,6 +419,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/Morphs': {
+      id: '/Morphs'
+      path: '/Morphs'
+      fullPath: '/Morphs'
+      preLoaderRoute: typeof MorphsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Logbook': {
+      id: '/Logbook'
+      path: '/Logbook'
+      fullPath: '/Logbook'
+      preLoaderRoute: typeof LogbookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Home': {
+      id: '/Home'
+      path: '/Home'
+      fullPath: '/Home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Care-guide': {
+      id: '/Care-guide'
+      path: '/Care-guide'
+      fullPath: '/Care-guide'
+      preLoaderRoute: typeof CareGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Breeding': {
+      id: '/Breeding'
+      path: '/Breeding'
+      fullPath: '/Breeding'
+      preLoaderRoute: typeof BreedingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -363,22 +464,29 @@ declare module '@tanstack/react-router' {
     '/_user': {
       id: '/_user'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof UserRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_public': {
       id: '/_public'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof PublicRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
       id: '/_auth'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -387,13 +495,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
-    }
-    '/_public/': {
-      id: '/_public/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof PublicIndexRouteImport
-      parentRoute: typeof PublicRouteRoute
     }
     '/_user/profile': {
       id: '/_user/profile'
@@ -468,14 +569,14 @@ declare module '@tanstack/react-router' {
     '/admin/tags/': {
       id: '/admin/tags/'
       path: '/tags'
-      fullPath: '/admin/tags'
+      fullPath: '/admin/tags/'
       preLoaderRoute: typeof AdminTagsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/settings/': {
       id: '/admin/settings/'
       path: '/settings'
-      fullPath: '/admin/settings'
+      fullPath: '/admin/settings/'
       preLoaderRoute: typeof AdminSettingsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
@@ -489,14 +590,14 @@ declare module '@tanstack/react-router' {
     '/admin/media/': {
       id: '/admin/media/'
       path: '/media'
-      fullPath: '/admin/media'
+      fullPath: '/admin/media/'
       preLoaderRoute: typeof AdminMediaIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/comments/': {
       id: '/admin/comments/'
       path: '/comments'
-      fullPath: '/admin/comments'
+      fullPath: '/admin/comments/'
       preLoaderRoute: typeof AdminCommentsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
@@ -541,7 +642,6 @@ interface PublicRouteRouteChildren {
   PublicPostsRoute: typeof PublicPostsRoute
   PublicSearchRoute: typeof PublicSearchRoute
   PublicUnsubscribeRoute: typeof PublicUnsubscribeRoute
-  PublicIndexRoute: typeof PublicIndexRoute
   PublicPostSlugRoute: typeof PublicPostSlugRoute
 }
 
@@ -549,7 +649,6 @@ const PublicRouteRouteChildren: PublicRouteRouteChildren = {
   PublicPostsRoute: PublicPostsRoute,
   PublicSearchRoute: PublicSearchRoute,
   PublicUnsubscribeRoute: PublicUnsubscribeRoute,
-  PublicIndexRoute: PublicIndexRoute,
   PublicPostSlugRoute: PublicPostSlugRoute,
 }
 
@@ -606,10 +705,16 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   PublicRouteRoute: PublicRouteRouteWithChildren,
   UserRouteRoute: UserRouteRouteWithChildren,
   AdminRouteRoute: AdminRouteRouteWithChildren,
+  BreedingRoute: BreedingRoute,
+  CareGuideRoute: CareGuideRoute,
+  HomeRoute: HomeRoute,
+  LogbookRoute: LogbookRoute,
+  MorphsRoute: MorphsRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   RssDotxmlRoute: RssDotxmlRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
