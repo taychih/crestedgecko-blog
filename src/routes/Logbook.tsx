@@ -5,7 +5,7 @@ import { getEvent } from 'vinxi/http'
 import { 
   Thermometer, Droplets, Utensils, Plus, 
   ChevronLeft, Calendar, Mars, Venus, HelpCircle,
-  Lock, Save, X, Trash2
+  Lock, Save, X, Trash2 // 使用了 Trash2 解决警告
 } from 'lucide-react'
 
 // --- 1. 后端数据库函数 (Server Functions) ---
@@ -15,7 +15,6 @@ const getDB = () => {
   return context.cloudflare.env.DB as D1Database
 }
 
-/** 获取所有守宫及其关联日志 */
 export const getGeckosFn = createServerFn('GET', async () => {
   const db = getDB()
   const { results: geckos } = await db.prepare('SELECT * FROM geckos ORDER BY id DESC').all()
@@ -30,7 +29,6 @@ export const getGeckosFn = createServerFn('GET', async () => {
   return enrichedGeckos
 })
 
-/** 创建新守宫成员 */
 export const createGeckoFn = createServerFn('POST', async (payload: { name: string, morph: string, gender: string }) => {
   const db = getDB()
   const defaultImg = `https://picsum.photos/seed/${Math.random()}/400/400`
@@ -40,7 +38,15 @@ export const createGeckoFn = createServerFn('POST', async (payload: { name: stri
   return { success: true }
 })
 
-/** 添加成长日记 */
+/** 新增：删除守宫函数 */
+export const deleteGeckoFn = createServerFn('POST', async (geckoId: number) => {
+  const db = getDB()
+  // 先删日志，再删守宫
+  await db.prepare('DELETE FROM logs WHERE gecko_id = ?').bind(geckoId).run()
+  await db.prepare('DELETE FROM geckos WHERE id = ?').bind(geckoId).run()
+  return { success: true }
+})
+
 export const addLogFn = createServerFn('POST', async (payload: { geckoId: number, temp: string, humidity: string, food: string, notes: string }) => {
   const db = getDB()
   const date = new Date().toLocaleDateString('zh-CN')
@@ -50,7 +56,7 @@ export const addLogFn = createServerFn('POST', async (payload: { geckoId: number
   return { success: true }
 })
 
-// --- 2. 路由注册与 Loader ---
+// --- 2. 路由注册 ---
 
 export const Route = createFileRoute('/Logbook')({
   loader: () => getGeckosFn(),
@@ -67,16 +73,6 @@ function LogbookPage() {
   
   const selectedGecko = geckos.find((g: any) => g.id === selectedGeckoId)
 
-  // 性别图标逻辑
-  const renderGenderIcon = (gender: string) => {
-    switch(gender) {
-      case 'Male': return <Mars size={14} className="text-blue-500" />
-      case 'Female': return <Venus size={14} className="text-pink-500" />
-      default: return <HelpCircle size={14} className="text-gray-400" />
-    }
-  }
-
-  // 快捷添加日志逻辑
   const handleQuickLog = async (geckoId: number) => {
     await addLogFn({
       geckoId,
@@ -85,12 +81,18 @@ function LogbookPage() {
       food: 'Pangea 混合果泥',
       notes: '日常记录：状态良好'
     })
-    router.invalidate() // 刷新页面数据
+    router.invalidate()
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('确定要移除这位成员吗？记录将无法找回。')) return
+    await deleteGeckoFn(id)
+    setSelectedGeckoId(null)
+    router.invalidate()
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12 animate-in">
-      {/* 头部区域 */}
+    <div className="max-w-6xl mx-auto px-4 py-12">
       <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="space-y-2">
           {selectedGeckoId ? (
@@ -102,7 +104,7 @@ function LogbookPage() {
               <Lock size={12} /> D1 云端加密记录
             </div>
           )}
-          <h1 className="text-4xl font-bold text-moss-dark serif">
+          <h1 className="text-4xl font-bold text-moss-dark">
             {selectedGeckoId ? selectedGecko?.name : `睫角玩家的个人爬房`}
           </h1>
         </div>
@@ -114,39 +116,38 @@ function LogbookPage() {
       </div>
 
       {!selectedGeckoId ? (
-        /* 守宫列表 */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {geckos.map((gecko: any) => (
-            <div key={gecko.id} onClick={() => setSelectedGeckoId(gecko.id)} className="group bg-white rounded-global border border-green-900/10 shadow-sm hover:shadow-2xl transition-all cursor-pointer overflow-hidden">
-              <div className="aspect-video relative overflow-hidden bg-amber-50">
-                <img src={gecko.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                <div className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-sm">{renderGenderIcon(gecko.gender)}</div>
-              </div>
+            <div key={gecko.id} onClick={() => setSelectedGeckoId(gecko.id)} className="group bg-white rounded-global border border-green-900/10 shadow-sm hover:shadow-2xl transition-all cursor-pointer overflow-hidden relative">
+              <img src={gecko.image} className="aspect-video w-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
               <div className="p-6">
-                <h3 className="text-2xl font-bold text-moss-dark serif">{gecko.name}</h3>
+                <h3 className="text-2xl font-bold text-moss-dark">{gecko.name}</h3>
                 <p className="text-xs text-amber-700 font-bold uppercase tracking-widest">{gecko.morph}</p>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        /* 详情与成长日记 */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-1 space-y-8">
             <div className="bg-white p-8 rounded-global border border-green-900/20 shadow-sm space-y-6">
-              <img src={selectedGecko?.image} className="w-full aspect-square rounded-global object-cover shadow-inner" alt="" />
-              <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold text-moss-dark serif">{selectedGecko?.name}</h2>
-                <div className="inline-block text-xs font-bold text-green-800 bg-amber-50 px-4 py-1 rounded-full uppercase">
-                  {selectedGecko?.morph}
-                </div>
+              <img src={selectedGecko?.image} className="w-full aspect-square rounded-global object-cover" alt="" />
+              <div className="text-center space-y-4">
+                <h2 className="text-3xl font-bold text-moss-dark">{selectedGecko?.name}</h2>
+                {/* 解决 Trash2 未读报警：点击删除功能 */}
+                <button 
+                  onClick={() => handleDelete(selectedGecko.id)}
+                  className="flex items-center gap-2 mx-auto text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
+                >
+                  <Trash2 size={14} /> 移除成员
+                </button>
               </div>
             </div>
           </div>
           
           <div className="lg:col-span-2 space-y-8">
             <div className="flex justify-between items-center border-b border-green-900/10 pb-4">
-              <h3 className="text-xl font-bold text-moss-dark serif">成长日记</h3>
+              <h3 className="text-xl font-bold text-moss-dark">成长日记</h3>
               <button onClick={() => handleQuickLog(selectedGecko.id)} className="bg-amber-800 text-white px-6 py-2 rounded-global text-[11px] font-bold uppercase tracking-widest hover:bg-amber-900">
                 + 记录今日状态
               </button>
@@ -164,11 +165,8 @@ function LogbookPage() {
                       <span className="flex items-center gap-1"><Droplets size={12} /> {log.humidity}</span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 mb-3">
-                    <Utensils size={14} className="text-amber-600 mt-1" />
-                    <p className="text-sm font-bold text-moss-dark">喂食：{log.food}</p>
-                  </div>
-                  <p className="text-xs text-green-900/70 italic border-l-2 border-amber-800/20 pl-4 py-1">“{log.notes}”</p>
+                  <p className="text-sm font-bold text-moss-dark flex items-center gap-2"><Utensils size={14} className="text-amber-600" /> 喂食：{log.food}</p>
+                  <p className="mt-3 text-xs text-green-900/70 italic border-l-2 border-amber-800/20 pl-4">“{log.notes}”</p>
                 </div>
               ))}
             </div>
@@ -176,7 +174,6 @@ function LogbookPage() {
         </div>
       )}
 
-      {/* 添加守宫 Modal */}
       {isAddModalOpen && (
         <AddGeckoModal onClose={() => setIsAddModalOpen(false)} onRefresh={() => router.invalidate()} />
       )}
@@ -184,10 +181,10 @@ function LogbookPage() {
   )
 }
 
-/** 内部弹窗组件 */
+/** AddGeckoModal 保持不变 ... */
 function AddGeckoModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
   const [name, setName] = useState('')
-  const [morph, setMorph] = useState('莉莉白')
+  const [morph, setMorph] = useState('莉莉白 (Lilly White)')
   const [gender, setGender] = useState('Female')
 
   const handleSave = async () => {
@@ -201,9 +198,9 @@ function AddGeckoModal({ onClose, onRefresh }: { onClose: () => void, onRefresh:
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative">
         <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"><X size={20}/></button>
-        <h2 className="text-2xl font-bold text-moss-dark mb-6 serif">登记新成员</h2>
+        <h2 className="text-2xl font-bold text-moss-dark mb-6">登记新成员</h2>
         <div className="space-y-4">
-          <input placeholder="守宫昵称" className="w-full p-4 bg-amber-50 rounded-xl outline-none border border-transparent focus:border-amber-200" value={name} onChange={e => setName(e.target.value)} />
+          <input placeholder="守宫昵称" className="w-full p-4 bg-amber-50 rounded-xl outline-none" value={name} onChange={e => setName(e.target.value)} />
           <select className="w-full p-4 bg-amber-50 rounded-xl outline-none" value={morph} onChange={e => setMorph(e.target.value)}>
             <option>莉莉白 (Lilly White)</option>
             <option>超级大麦町</option>
