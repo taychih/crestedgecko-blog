@@ -217,11 +217,11 @@ export interface FileRoutesByFullPath {
   '/profile': typeof UserProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/post/$slug': typeof PublicPostSlugRoute
-  '/admin/comments/': typeof AdminCommentsIndexRoute
-  '/admin/media/': typeof AdminMediaIndexRoute
+  '/admin/comments': typeof AdminCommentsIndexRoute
+  '/admin/media': typeof AdminMediaIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
-  '/admin/settings/': typeof AdminSettingsIndexRoute
-  '/admin/tags/': typeof AdminTagsIndexRoute
+  '/admin/settings': typeof AdminSettingsIndexRoute
+  '/admin/tags': typeof AdminTagsIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
 }
 export interface FileRoutesByTo {
@@ -311,11 +311,11 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/'
     | '/post/$slug'
-    | '/admin/comments/'
-    | '/admin/media/'
+    | '/admin/comments'
+    | '/admin/media'
     | '/admin/posts/'
-    | '/admin/settings/'
-    | '/admin/tags/'
+    | '/admin/settings'
+    | '/admin/tags'
     | '/admin/posts/edit/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -464,21 +464,21 @@ declare module '@tanstack/react-router' {
     '/_user': {
       id: '/_user'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof UserRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_public': {
       id: '/_public'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof PublicRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_auth': {
       id: '/_auth'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -569,14 +569,14 @@ declare module '@tanstack/react-router' {
     '/admin/tags/': {
       id: '/admin/tags/'
       path: '/tags'
-      fullPath: '/admin/tags/'
+      fullPath: '/admin/tags'
       preLoaderRoute: typeof AdminTagsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/settings/': {
       id: '/admin/settings/'
       path: '/settings'
-      fullPath: '/admin/settings/'
+      fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
@@ -590,14 +590,14 @@ declare module '@tanstack/react-router' {
     '/admin/media/': {
       id: '/admin/media/'
       path: '/media'
-      fullPath: '/admin/media/'
+      fullPath: '/admin/media'
       preLoaderRoute: typeof AdminMediaIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/comments/': {
       id: '/admin/comments/'
       path: '/comments'
-      fullPath: '/admin/comments/'
+      fullPath: '/admin/comments'
       preLoaderRoute: typeof AdminCommentsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }

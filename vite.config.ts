@@ -6,21 +6,16 @@ import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import viteTsConfigPaths from "vite-tsconfig-paths";
 
-const config = defineConfig({
+export default defineConfig({
   plugins: [
+    tanstackStart(), 
     cloudflare({
-      viteEnvironment: {
-        name: "ssr",
-      },
+      viteEnvironment: { name: "ssr" },
     }),
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
+    viteTsConfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
     devtools(),
-    tanstackStart(),
     viteReact(),
   ],
+  // ❌ 删掉 SSR EXTERNAL
 });
-
-export default config;

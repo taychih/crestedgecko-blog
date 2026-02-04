@@ -1,236 +1,309 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 import { useState } from 'react'
 import { 
   Thermometer, Droplets, Utensils, Plus, 
   ChevronLeft, Calendar, Mars, Venus, HelpCircle,
   Lock, Save, X, Trash2 
 } from 'lucide-react'
-// ✅ 引入服务器端的数据库工具
-import { getDB } from './logbook.server'
 
-// --- 1. 后端数据库函数 (Server Functions) ---
+// 引入纯逻辑 Action（确保这个文件里没有引入 vinxi 或 @tanstack/start）
+import { 
+  getGeckosAction,
+  createGeckoAction,
+  deleteGeckoAction,
+  addLogAction
+} from '../features/logbook/logbook.server'
 
-/** 获取所有守宫及其关联日志 */
-export const getGeckosFn = createServerFn('GET', async () => {
-  const db = getDB()
-  const { results: geckos } = await db.prepare('SELECT * FROM geckos ORDER BY id DESC').all()
+// --- 核心修复：彻底逃避 Vite 客户端扫描的辅助函数 ---
+const getServerEvent = async () => {
+  // 1. 如果在浏览器环境，直接返回 null
+  if (typeof window !== 'undefined' || !import.meta.env.SSR) return null;
   
-  const enrichedGeckos = await Promise.all(geckos.map(async (gecko: any) => {
-    const { results: logs } = await db
-      .prepare('SELECT * FROM logs WHERE gecko_id = ? ORDER BY id DESC LIMIT 20')
-      .bind(gecko.id)
-      .all()
-    return { ...gecko, logs }
-  }))
-  return enrichedGeckos
+  try {
+    // 2. 这里的关键：使用变量名而非直接在 import() 中写字符串
+    // 配合 @vite-ignore，Vite 构建工具会跳过对这个模块的深度依赖扫描
+    const vinxiModule = 'vinxi/http';
+    const { getEvent } = await import(/* @vite-ignore */ vinxiModule);
+    return getEvent();
+  } catch (e) {
+    console.error('服务端获取 Event 失败:', e);
+    return null;
+  }
+};
+
+// --- RPC 包装函数 (Server Functions) ---
+
+export const getGeckosFn = createServerFn('GET', async () => {
+  const event = await getServerEvent();
+  if (!event) return []; // 客户端安全占位符
+  return getGeckosAction(event);
 })
 
-/** 创建新守宫成员 */
 export const createGeckoFn = createServerFn('POST', async (payload: { name: string, morph: string, gender: string }) => {
-  const db = getDB()
-  const defaultImg = `https://picsum.photos/seed/${Math.random()}/400/400`
-  await db.prepare('INSERT INTO geckos (name, morph, gender, image) VALUES (?, ?, ?, ?)')
-    .bind(payload.name, payload.morph, payload.gender, defaultImg)
-    .run()
-  return { success: true }
+  const event = await getServerEvent();
+  if (!event) return { success: false };
+  return createGeckoAction(event, payload);
 })
 
-/** 删除守宫及其日志 */
 export const deleteGeckoFn = createServerFn('POST', async (geckoId: number) => {
-  const db = getDB()
-  await db.prepare('DELETE FROM logs WHERE gecko_id = ?').bind(geckoId).run()
-  await db.prepare('DELETE FROM geckos WHERE id = ?').bind(geckoId).run()
-  return { success: true }
+  const event = await getServerEvent();
+  if (!event) return { success: false };
+  return deleteGeckoAction(event, geckoId);
 })
 
-/** 添加成长日记 */
 export const addLogFn = createServerFn('POST', async (payload: { geckoId: number, temp: string, humidity: string, food: string, notes: string }) => {
-  const db = getDB()
-  const date = new Date().toLocaleDateString('zh-CN')
-  await db.prepare('INSERT INTO logs (gecko_id, log_date, temp, humidity, food, notes) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(payload.geckoId, date, payload.temp, payload.humidity, payload.food, payload.notes)
-    .run()
-  return { success: true }
+  const event = await getServerEvent();
+  if (!event) return { success: false };
+  return addLogAction(event, payload);
 })
 
-// --- 2. 路由注册 ---
+// --- 路由注册 ---
 
 export const Route = createFileRoute('/Logbook')({
   loader: () => getGeckosFn(),
   component: LogbookPage,
 })
 
-// --- 3. 页面组件 ---
+// --- 页面组件 ---
 
 function LogbookPage() {
   const geckos = Route.useLoaderData()
   const router = useRouter()
   const [selectedGeckoId, setSelectedGeckoId] = useState<number | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  
+
   const selectedGecko = geckos.find((g: any) => g.id === selectedGeckoId)
 
-  const handleQuickLog = async (geckoId: number) => {
-    await addLogFn({
-      geckoId,
-      temp: '26℃',
-      humidity: '75%',
-      food: 'Pangea 混合果泥',
-      notes: '日常记录：状态良好'
-    })
-    router.invalidate()
-  }
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('确定要移除这位成员吗？相关记录将永久消失。')) return
-    await deleteGeckoFn(id)
-    setSelectedGeckoId(null)
-    router.invalidate()
-  }
-
+  // 性别图标渲染
   const renderGenderIcon = (gender: string) => {
-    switch(gender) {
-      case 'Male': return <Mars size={14} className="text-blue-500" />
-      case 'Female': return <Venus size={14} className="text-pink-500" />
-      default: return <HelpCircle size={14} className="text-gray-400" />
+    switch (gender) {
+      case 'Male': return <Mars className="w-4 h-4 text-blue-400" />
+      case 'Female': return <Venus className="w-4 h-4 text-pink-400" />
+      default: return <HelpCircle className="w-4 h-4 text-gray-400" />
     }
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      {/* 头部 */}
-      <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="space-y-2">
-          {selectedGeckoId ? (
-            <button onClick={() => setSelectedGeckoId(null)} className="flex items-center gap-2 text-amber-800 font-bold text-sm uppercase tracking-widest mb-4 hover:opacity-70 transition-opacity">
-              <ChevronLeft size={16} /> 返回列表
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-widest">
-              <Lock size={12} /> D1 云端加密记录
-            </div>
-          )}
-          <h1 className="text-4xl font-bold text-moss-dark serif">
-            {selectedGeckoId ? selectedGecko?.name : `睫角玩家的个人爬房`}
-          </h1>
-        </div>
-        {!selectedGeckoId && (
-          <button onClick={() => setIsAddModalOpen(true)} className="bg-moss-dark text-white px-8 py-4 rounded-global font-bold flex items-center gap-3 shadow-xl hover:bg-green-800 transition-all">
-            <Plus size={20} /> 添加成员
+    <div className="min-h-screen bg-[#1a1a1a] text-gray-100 p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto">
+        {/* 顶部标题栏 */}
+        <header className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-400 to-yellow-200 bg-clip-text text-transparent">
+              守宫日记 Logbook
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">管理你的睫角守宫家族与健康记录</p>
+          </div>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg transition-all shadow-lg shadow-orange-900/20"
+          >
+            <Plus className="w-5 h-5" />
+            <span>添加成员</span>
           </button>
-        )}
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* 左侧：列表展示 */}
+          <div className="lg:col-span-4 space-y-4 h-[calc(100vh-200px)] overflow-y-auto pr-2 custom-scrollbar">
+            {geckos.map((gecko: any) => (
+              <div 
+                key={gecko.id}
+                onClick={() => setSelectedGeckoId(gecko.id)}
+                className={`group relative flex items-center gap-4 p-4 rounded-xl cursor-pointer border transition-all ${
+                  selectedGeckoId === gecko.id 
+                  ? 'bg-orange-500/10 border-orange-500/50 shadow-inner' 
+                  : 'bg-[#252525] border-transparent hover:border-gray-600'
+                }`}
+              >
+                <img src={gecko.image} alt={gecko.name} className="w-16 h-16 rounded-full object-cover border-2 border-gray-700 group-hover:border-orange-400 transition-all" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-lg">{gecko.name}</h3>
+                    {renderGenderIcon(gecko.gender)}
+                  </div>
+                  <p className="text-sm text-gray-400">{gecko.morph}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 右侧：详情展示与记录 */}
+          <div className="lg:col-span-8 bg-[#252525] rounded-2xl p-6 border border-gray-800 relative min-h-[500px]">
+            {selectedGecko ? (
+              <div className="animate-in fade-in duration-300">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex gap-6 items-center">
+                    <img src={selectedGecko.image} alt={selectedGecko.name} className="w-24 h-24 rounded-2xl object-cover border-4 border-[#1a1a1a]" />
+                    <div>
+                      <h2 className="text-4xl font-black mb-1">{selectedGecko.name}</h2>
+                      <div className="flex gap-4 text-sm text-gray-400">
+                        <span className="flex items-center gap-1"><Mars className="w-4 h-4" /> {selectedGecko.gender}</span>
+                        <span className="flex items-center gap-1"><Utensils className="w-4 h-4" /> {selectedGecko.morph}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if(confirm('确定要移除这位成员吗？')) {
+                        deleteGeckoFn(selectedGecko.id).then(() => router.invalidate())
+                      }
+                    }}
+                    className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* 快速日志表单 */}
+                <div className="bg-[#1a1a1a] p-4 rounded-xl mb-8 border border-gray-800">
+                  <h3 className="text-sm font-semibold mb-3 text-gray-500 flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> 快速添加记录
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="text-gray-500">温度</span>
+                      <input id={`temp-${selectedGecko.id}`} placeholder="26℃" className="bg-[#2a2a2a] border-none rounded p-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none" />
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="text-gray-500">湿度</span>
+                      <input id={`humi-${selectedGecko.id}`} placeholder="75%" className="bg-[#2a2a2a] border-none rounded p-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none" />
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="text-gray-500">投喂食物</span>
+                      <input id={`food-${selectedGecko.id}`} placeholder="Pangea 果泥" className="bg-[#2a2a2a] border-none rounded p-2 text-sm focus:ring-1 focus:ring-orange-500 outline-none" />
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        const temp = (document.getElementById(`temp-${selectedGecko.id}`) as HTMLInputElement).value
+                        const humidity = (document.getElementById(`humi-${selectedGecko.id}`) as HTMLInputElement).value
+                        const food = (document.getElementById(`food-${selectedGecko.id}`) as HTMLInputElement).value
+                        await addLogFn({ geckoId: selectedGecko.id, temp, humidity, food, notes: '快速记录' })
+                        router.invalidate()
+                      }}
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded self-end transition-colors shadow-lg shadow-orange-900/20"
+                    >
+                      保存记录
+                    </button>
+                  </div>
+                </div>
+
+                {/* 历史记录列表 */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-bold text-orange-400 flex items-center gap-2 mb-4">
+                    <Calendar className="w-5 h-5" /> 历史日志
+                  </h3>
+                  {selectedGecko.logs.length > 0 ? (
+                    selectedGecko.logs.map((log: any) => (
+                      <div key={log.id} className="bg-[#1e1e1e] p-4 rounded-lg border-l-4 border-orange-500 flex justify-between items-center group hover:bg-[#252525] transition-colors">
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500 font-mono mb-1">{log.log_date}</div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="flex items-center gap-1 text-blue-300"><Thermometer className="w-3 h-3" /> {log.temp}</span>
+                            <span className="flex items-center gap-1 text-cyan-300"><Droplets className="w-3 h-3" /> {log.humidity}</span>
+                            <span className="flex items-center gap-1 text-green-300"><Utensils className="w-3 h-3" /> {log.food}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 italic group-hover:text-gray-400 transition-colors">
+                          {log.notes}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-gray-600 border-2 border-dashed border-gray-800 rounded-xl">
+                      暂无历史记录
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-gray-600">
+                <ChevronLeft className="w-12 h-12 mb-2 animate-pulse" />
+                <p className="text-xl">请在左侧选择一位成员</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {!selectedGeckoId ? (
-        /* 守宫列表卡片 */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {geckos.map((gecko: any) => (
-            <div key={gecko.id} onClick={() => setSelectedGeckoId(gecko.id)} className="group bg-white rounded-global border border-green-900/10 shadow-sm hover:shadow-2xl transition-all cursor-pointer overflow-hidden relative">
-              <div className="aspect-video relative overflow-hidden bg-amber-50">
-                <img src={gecko.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={gecko.name} />
-                <div className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-sm">{renderGenderIcon(gecko.gender)}</div>
-              </div>
-              <div className="p-6">
-                <h3 className="text-2xl font-bold text-moss-dark serif">{gecko.name}</h3>
-                <p className="text-xs text-amber-700 font-bold uppercase tracking-widest">{gecko.morph}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        /* 守宫详情及日志页 */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-1 space-y-8">
-            <div className="bg-white p-8 rounded-global border border-green-900/20 shadow-sm space-y-6">
-              <img src={selectedGecko?.image} className="w-full aspect-square rounded-global object-cover shadow-inner" alt="" />
-              <div className="text-center space-y-4">
-                <h2 className="text-3xl font-bold text-moss-dark serif">{selectedGecko?.name}</h2>
-                <div className="inline-block text-xs font-bold text-green-800 bg-amber-50 px-4 py-1 rounded-full uppercase mb-4">
-                  {selectedGecko?.morph}
-                </div>
-                <button 
-                  onClick={() => handleDelete(selectedGecko.id)}
-                  className="flex items-center gap-2 mx-auto text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
-                >
-                  <Trash2 size={14} /> 移除成员
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-2 space-y-8">
-            <div className="flex justify-between items-center border-b border-green-900/10 pb-4">
-              <h3 className="text-xl font-bold text-moss-dark serif">成长日记</h3>
-              <button onClick={() => handleQuickLog(selectedGecko.id)} className="bg-amber-800 text-white px-6 py-2 rounded-global text-[11px] font-bold uppercase tracking-widest hover:bg-amber-900 transition-colors">
-                + 记录今日状态
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {selectedGecko?.logs.map((log: any) => (
-                <div key={log.id} className="bg-white p-6 rounded-global border border-green-900/10 shadow-sm hover:border-green-900/30 transition-all">
-                  <div className="flex justify-between mb-4">
-                    <div className="text-xs font-mono font-bold text-amber-800 flex items-center gap-1">
-                      <Calendar size={12} /> {log.log_date}
-                    </div>
-                    <div className="flex gap-4 text-xs font-bold text-green-700">
-                      <span className="flex items-center gap-1"><Thermometer size={12} /> {log.temp}</span>
-                      <span className="flex items-center gap-1"><Droplets size={12} /> {log.humidity}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 mb-3">
-                    <Utensils size={14} className="text-amber-600 mt-1" />
-                    <p className="text-sm font-bold text-moss-dark">喂食：{log.food}</p>
-                  </div>
-                  <p className="text-xs text-green-900/70 italic border-l-2 border-amber-800/20 pl-4 py-1">“{log.notes}”</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* 添加成员模态框 */}
       {isAddModalOpen && (
-        <AddGeckoModal onClose={() => setIsAddModalOpen(false)} onRefresh={() => router.invalidate()} />
+        <AddGeckoModal 
+          onClose={() => setIsAddModalOpen(false)} 
+          onSuccess={() => {
+            setIsAddModalOpen(false)
+            router.invalidate()
+          }} 
+        />
       )}
     </div>
   )
 }
 
-function AddGeckoModal({ onClose, onRefresh }: { onClose: () => void, onRefresh: () => void }) {
+// 模态框组件
+function AddGeckoModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const [name, setName] = useState('')
-  const [morph, setMorph] = useState('莉莉白 (Lilly White)')
-  const [gender, setGender] = useState('Female')
-
-  const handleSave = async () => {
-    if(!name) return
-    await createGeckoFn({ name, morph, gender })
-    onRefresh()
-    onClose()
-  }
+  const [morph, setMorph] = useState('')
+  const [gender, setGender] = useState('Unknown')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative">
-        <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"><X size={20}/></button>
-        <h2 className="text-2xl font-bold text-moss-dark mb-6 serif">登记新成员</h2>
-        <div className="space-y-4">
-          <input placeholder="守宫昵称" className="w-full p-4 bg-amber-50 rounded-xl outline-none border-2 border-transparent focus:border-amber-200 transition-all" value={name} onChange={e => setName(e.target.value)} />
-          <select className="w-full p-4 bg-amber-50 rounded-xl outline-none" value={morph} onChange={e => setMorph(e.target.value)}>
-            <option>莉莉白 (Lilly White)</option>
-            <option>超级大麦町</option>
-            <option>火团/双色</option>
-          </select>
-          <div className="flex gap-4">
-            {['Male', 'Female', 'Unknown'].map(g => (
-              <button key={g} onClick={() => setGender(g)} className={`flex-1 py-2 rounded-lg text-xs font-bold border ${gender === g ? 'bg-moss-dark text-white' : 'bg-white text-gray-400 border-gray-100'} transition-all`}>
-                {g === 'Male' ? '雄性' : g === 'Female' ? '雌性' : '未知'}
-              </button>
-            ))}
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#252525] border border-gray-700 w-full max-w-md rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-800 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-orange-400">登记新成员</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-800 rounded-full transition-colors"><X /></button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">名字</label>
+            <input 
+              autoFocus
+              className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg p-3 outline-none focus:border-orange-500 transition-all"
+              placeholder="例如：蛋挞"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
           </div>
-          <button onClick={handleSave} className="w-full bg-moss-dark text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-black shadow-lg transition-all">
-            <Save size={18} /> 存入云端
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">品种/基因</label>
+            <input 
+              className="w-full bg-[#1a1a1a] border border-gray-800 rounded-lg p-3 outline-none focus:border-orange-500 transition-all"
+              placeholder="例如：黄莉莉 Lily White"
+              value={morph}
+              onChange={e => setMorph(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm text-gray-400">性别</label>
+            <div className="flex gap-2">
+              {['Male', 'Female', 'Unknown'].map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGender(g)}
+                  className={`flex-1 py-2 rounded-lg border transition-all ${
+                    gender === g ? 'bg-orange-500 border-orange-400 text-white' : 'bg-[#1a1a1a] border-gray-800 text-gray-400'
+                  }`}
+                >
+                  {g === 'Male' ? '公' : g === 'Female' ? '母' : '未知'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 bg-[#1e1e1e] flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 text-gray-400 hover:text-white transition-colors">取消</button>
+          <button 
+            onClick={async () => {
+              if(!name) return alert('请输入名字')
+              await createGeckoFn({ name, morph, gender })
+              onSuccess()
+            }}
+            className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold shadow-lg shadow-orange-900/20 transition-all"
+          >
+            确认添加
           </button>
         </div>
       </div>

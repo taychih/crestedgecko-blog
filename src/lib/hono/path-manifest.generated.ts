@@ -3,7 +3,13 @@
 
 // Pre-compiled Regexes for maximum performance on Cloudflare Workers
 export const ROUTE_REGEXPS: Array<RegExp> = [
+  new RegExp("^/$"),
   new RegExp("^/admin/?$"),
+  new RegExp("^/Breeding/?$"),
+  new RegExp("^/Care-guide/?$"),
+  new RegExp("^/Home/?$"),
+  new RegExp("^/Logbook/?$"),
+  new RegExp("^/Morphs/?$"),
   new RegExp("^/robots\\.txt/?$"),
   new RegExp("^/rss\\.xml/?$"),
   new RegExp("^/sitemap\\.xml/?$"),
@@ -17,13 +23,12 @@ export const ROUTE_REGEXPS: Array<RegExp> = [
   new RegExp("^/search/?$"),
   new RegExp("^/unsubscribe/?$"),
   new RegExp("^/profile/?$"),
-  new RegExp("^/$"),
   new RegExp("^/post/[^/]+/?$"),
   new RegExp("^/admin/comments/?$"),
   new RegExp("^/admin/media/?$"),
   new RegExp("^/admin/settings/?$"),
   new RegExp("^/admin/tags/?$"),
-  new RegExp("^/admin/posts/edit/[^/]+/?$"),
+  new RegExp("^/admin/posts/edit/[^/]+/?$")
 ];
 
 /**
