@@ -26,7 +26,7 @@ export async function get<T extends z.ZodTypeAny>(
   if (kvData !== null && kvData !== undefined) {
     const result = schema.safeParse(kvData);
     if (result.success) {
-      qconsole.log(`[Cache] HIT: ${serializedKey}`);
+      console.log(`[Cache] HIT: ${serializedKey}`);
       return result.data;
     }
   }
